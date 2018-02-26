@@ -1,0 +1,257 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <style>
+        .text-large {
+            font-size: 3rem;
+        }
+
+        .text-medium {
+            font-size: 1.5rem;
+        }
+
+        .chart-size {
+            min-height: 420px;
+        }
+    </style>
+</head>
+
+<body class="mt-5">
+    <div id="current-values" class="container">
+        <div class="row justify-content-center">
+            <div id="velocity-graph" class="col-8 chart-size"></div>
+            <div id="velocity-current" class="col-2 pt-5">
+                Current Velocity:
+                <br>
+                <b class="text-large">{{ velocity }}</b> <span class="text-medium">cm/s</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12"><hr></div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div id="position-graph" class="col-8 chart-size"></div>
+            <div id="position-current" class="col-2 pt-5">
+                Current Position:
+                <br>
+                <b class="text-large">{{ position }}</b> <span class="text-medium">m</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+
+    <script>
+        var refresh_period = 300;
+        var refresh_period_secs = refresh_period / 1000;
+        var current_time = 0.0;
+        var data_url = 'http://127.0.0.1:5000/';
+        var stopped = false;
+
+        var current_values = new Vue({
+            el: '#current-values',
+            data: {
+                velocity: 0,
+                position: 0,
+            },
+            mounted: function () {
+                var self = this;
+                setInterval(function () {
+                    $.ajax({
+                        url: data_url,
+                        method: 'get',
+                        dataType: 'json',
+                        success: function (data) {
+                            if (!stopped) {
+                                self.velocity = data.velocity;
+                                self.position = data.position;
+                            }
+                        },
+                        error: function (error) {
+                            console.log(error);
+                        }
+                    });
+                }, refresh_period);
+            }
+        })
+
+        Highcharts.setOptions({
+            global: {
+                useUTC: false
+            }
+        });
+
+        var velocity_chart = Highcharts.chart('velocity-graph', {
+            chart: {
+                type: 'spline',
+                animation: {
+                    duration: refresh_period * 2,
+                }, // don't animate in old IE
+                marginRight: 10,
+                events: {
+                    load: function () {
+                        // set up the updating of the chart each second
+                        var series = this.series[0];
+                        setInterval(function () {
+                            if (!stopped) {
+                                var time = (current_time + refresh_period_secs),
+                                    value = current_values.velocity;
+                                current_time = time;
+                                series.addPoint([time, value], true, true);
+                            }
+                        }, refresh_period);
+                    }
+                }
+            },
+            title: {
+                text: 'Velocity Graph',
+            },
+            xAxis: {
+                title: {
+                    text: 'Time (s)'
+                },
+                type: 'integer',
+                tickPixelInterval: refresh_period,
+            },
+            yAxis: {
+                title: {
+                    text: 'Velocity (cm/s)'
+                },
+                plotLines: [{
+                    value: 0,
+                    width: 1,
+                    color: '#808080'
+                }]
+            },
+            'tooltip': {
+                enabled: true,
+                formatter: function () {
+                    return '<b>Time: </b>' + Highcharts.numberFormat(this.x, 2) + '<br/>' +
+                           '<b>Velocity: </b>' + Highcharts.numberFormat(this.y, 2)
+                }
+            },
+            'legend': {
+                enabled: true
+            },
+            'exporting': {
+                enabled: false
+            },
+            'plotOptions': {
+                'spline': {
+                    'marker': {
+                        'enabled': false
+                    }
+                },
+            },
+            series: [{
+                name: 'Velocity',
+                data: (function () {
+                    // generate an array of random data
+                    var data = [],
+                        time = current_time,
+                        i;
+
+                    for (i = -10; i <= 0; i += 1) {
+                        current_time = i * refresh_period_secs;
+                        data.push({
+                            x: current_time,
+                            y: 0
+                        });
+                    }
+                    return data;
+                }())
+            }]
+        });
+
+        var position_chart = Highcharts.chart('position-graph', {
+            chart: {
+                type: 'spline',
+                animation: {
+                    duration: refresh_period * 2,
+                }, // don't animate in old IE
+                marginRight: 10,
+                events: {
+                    load: function () {
+                        // set up the updating of the chart each second
+                        var series = this.series[0];
+                        setInterval(function () {
+                            if (!stopped) {
+                                var time = (current_time + refresh_period_secs),
+                                    value = current_values.position;
+                                current_time = time;
+                                series.addPoint([time, value], true, true);
+                            }
+                        }, refresh_period);
+                    }
+                }
+            },
+            title: {
+                text: 'Position Graph',
+            },
+            xAxis: {
+                title: {
+                    text: 'Time (s)'
+                },
+                type: 'integer',
+                tickPixelInterval: refresh_period,
+            },
+            yAxis: {
+                title: {
+                    text: 'Position (m)'
+                },
+                plotLines: [{
+                    value: 0,
+                    width: 1,
+                    color: '#93BD5C'
+                }]
+            },
+            'tooltip': {
+                enabled: true,
+                formatter: function () {
+                    return '<b>Time: </b>' + Highcharts.numberFormat(this.x, 2) + '<br/>' +
+                           '<b>Velocity: </b>' + Highcharts.numberFormat(this.y, 2)
+                }
+            },
+            'legend': {
+                enabled: true
+            },
+            'exporting': {
+                enabled: false
+            },
+            'plotOptions': {
+                'spline': {
+                    'marker': {
+                        'enabled': false
+                    }
+                },
+            },
+            series: [{
+                name: 'Position',
+                data: (function () {
+                    // generate an array of random data
+                    var data = [],
+                        time = current_time,
+                        i;
+
+                    for (i = -10; i <= 0; i += 1) {
+                        current_time = i * refresh_period_secs;
+                        data.push({
+                            x: current_time,
+                            y: 0
+                        });
+                    }
+                    return data;
+                }())
+            }]
+        });
+
+
+    </script>
+</body>
+
+</html>
