@@ -13,5 +13,9 @@ reader = SerialReader(connection=ser)
 
 
 @app.route("/")
-def hello():
+def serve():
     return jsonify(reader.get_serial_data())
+
+
+if __name__ == '__main__':
+    app.run()

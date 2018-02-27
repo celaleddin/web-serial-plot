@@ -10,5 +10,5 @@ The application back-end is implemented in Python, so Python (Python 3, of cours
 
 #### Running
 
-* Run local web server which reads serial data and publishes: `FLASK_APP=server.py flask run`
+* Run local web server which reads serial data and publishes: `python server.py`
 * Open `graph.html` in your favorite web browser and enjoy!
